@@ -2,9 +2,9 @@
   "name": "chatbot-awanbrayy",
   "version": "1.0.0",
   "description": "A simple chatbot application using Node.js and Express.",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "keywords": [
     "chatbot",
