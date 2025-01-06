@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>CHATBOT - AI WANZ</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: "Euclid Circular A", sans-serif;
+      background: linear-gradient(135deg, #685aff, #ffffff);
+      color: #000;
+      animation: rotate 5s infinite alternate linear;
+    }
+
+    @keyframes rotate {
+      100% {
+        background-position: 25% 50%;
+      }
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .chat-header {
+      text-align: center;
+      padding: 10px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-header h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      margin: 20px 0;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .message {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message.bot {
+      justify-content: flex-start;
+    }
+
+    .message .text {
+      max-width: 70%;
+      padding: 10px 15px;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    .message.user .text {
+      background: #685aff;
+      color: #ffffff;
+    }
+
+    .message.bot .text {
+      background: #eeeeee;
+      color: #000;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    .chat-input button {
+      padding: 10px 20px;
+      background: #685aff;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .chat-input button:hover {
+      background: #5746d9;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h2>CHATBOT AI WANZ</h2>
+    </div>
+
+    <div id="chatBox" class="chat-box">
+      <!-- Pesan akan muncul di sini -->
+    </div>
+
+    <div class="chat-input">
+      <input type="text" id="messageInput" placeholder="Tulis pesan Anda..." />
+      <button onclick="sendMessage()">Kirim</button>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chatBox");
+
+    function appendMessage(sender, text) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("message", sender);
+      messageDiv.innerHTML = `<div class="text">${text}</div>`;
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      // Tambahkan pesan pengguna ke antarmuka
+      appendMessage("user", message);
+      input.value = "";
+
+      // Kirim pesan ke server
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+        const data = await response.json();
+        appendMessage("bot", data.response || "Maaf, terjadi kesalahan.");
+      } catch (error) {
+        appendMessage("bot", "Gagal menghubungi server.");
+      }
+    }
+  </script>
+</body>
+</html>
+
