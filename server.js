@@ -73,10 +73,13 @@ function getWeather(city, callback) {
 
 // Server HTTP
 const server = http.createServer((req, res) => {
+  // Cek apakah permintaan GET ke root
   if (req.method === "GET" && req.url === "/") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("Server berjalan dengan baik.");
-  } else if (req.method === "POST" && req.url === "/chat") {
+  } 
+  // Cek apakah permintaan POST untuk chat
+  else if (req.method === "POST" && req.url === "/chat") {
     let body = "";
 
     req.on("data", (chunk) => {
@@ -87,12 +90,14 @@ const server = http.createServer((req, res) => {
       try {
         const { message } = JSON.parse(body);
 
+        // Jika pesan kosong
         if (!message) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Pesan tidak boleh kosong." }));
           return;
         }
 
+        // Cek apakah pesan berhubungan dengan cuaca
         if (message.toLowerCase().includes("cuaca")) {
           getWeather(DEFAULT_CITY, (err, weatherResponse) => {
             if (err) {
@@ -104,6 +109,7 @@ const server = http.createServer((req, res) => {
             }
           });
         } else {
+          // Jika bukan cuaca, kirim ke OpenAI
           getOpenAIResponse(message, (err, aiResponse) => {
             if (err) {
               res.writeHead(500, { "Content-Type": "application/json" });
@@ -120,6 +126,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else {
+    // Jika endpoint tidak ditemukan
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Endpoint tidak ditemukan." }));
   }
@@ -130,3 +137,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
+        
