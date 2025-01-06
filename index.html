@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CHATBOT - AI WANZ</title>
   <style>
+    /* CSS Style seperti yang sudah dijelaskan sebelumnya */
     * {
       box-sizing: border-box;
     }
 
-    html,
-    body {
+    html, body {
       height: 100%;
       margin: 0;
       padding: 0;
@@ -137,40 +137,30 @@
   <script>
     const chatBox = document.getElementById("chatBox");
 
-    // Fungsi untuk menambahkan pesan ke chat box
     function appendMessage(sender, text) {
       const messageDiv = document.createElement("div");
       messageDiv.classList.add("message", sender);
       messageDiv.innerHTML = `<div class="text">${text}</div>`;
       chatBox.appendChild(messageDiv);
-      chatBox.scrollTop = chatBox.scrollHeight; // Scroll otomatis ke bawah
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // Fungsi untuk mengirim pesan dan mendapatkan respons dari server
     async function sendMessage() {
       const input = document.getElementById("messageInput");
       const message = input.value.trim();
       if (!message) return;
 
-      // Menambahkan pesan pengguna ke chat box
       appendMessage("user", message);
-      input.value = ""; // Kosongkan input
+      input.value = "";
 
       try {
-        // Mengirim permintaan ke server
         const response = await fetch("http://localhost:3000/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message }),
         });
         const data = await response.json();
-
-        // Menambahkan respons dari server ke chat box
-        if (data.response) {
-          appendMessage("bot", data.response);
-        } else {
-          appendMessage("bot", "Maaf, terjadi kesalahan.");
-        }
+        appendMessage("bot", data.response || "Maaf, terjadi kesalahan.");
       } catch (error) {
         appendMessage("bot", "Gagal menghubungi server.");
       }
@@ -178,3 +168,4 @@
   </script>
 </body>
 </html>
+
