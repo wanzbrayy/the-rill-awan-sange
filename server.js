@@ -1,140 +1,71 @@
-const http = require("http");
-const https = require("https");
+const express = require('express');
+const cors = require('cors');
 const { OPENAI_API_KEY, WEATHER_API_KEY, DEFAULT_CITY } = require("./config");
+const fetch = require('node-fetch');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json()); // Untuk mem-parsing body JSON
 
 // Fungsi untuk mendapatkan respons dari OpenAI API
-function getOpenAIResponse(message, callback) {
+async function getOpenAIResponse(message) {
   const postData = JSON.stringify({
     model: "gpt-3.5-turbo",
     messages: [{ role: "user", content: message }],
   });
 
-  const options = {
-    hostname: "api.openai.com",
-    path: "/v1/chat/completions",
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${OPENAI_API_KEY}`,
-      "Content-Length": Buffer.byteLength(postData),
     },
-  };
-
-  const req = https.request(options, (res) => {
-    let data = "";
-
-    res.on("data", (chunk) => {
-      data += chunk;
-    });
-
-    res.on("end", () => {
-      try {
-        const response = JSON.parse(data);
-        const reply = response.choices[0]?.message?.content || "Maaf, tidak ada jawaban.";
-        callback(null, reply);
-      } catch (error) {
-        callback(error, null);
-      }
-    });
+    body: postData,
   });
 
-  req.on("error", (err) => {
-    callback(err, null);
-  });
-
-  req.write(postData);
-  req.end();
+  const data = await response.json();
+  return data.choices[0]?.message?.content || "Maaf, tidak ada jawaban.";
 }
 
-// Fungsi untuk mendapatkan cuaca dari Weather API
-function getWeather(city, callback) {
+// Fungsi untuk mendapatkan cuaca dari OpenWeather API
+async function getWeather(city) {
   const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${WEATHER_API_KEY}&units=metric`;
 
-  https.get(apiUrl, (res) => {
-    let data = "";
+  const response = await fetch(apiUrl);
+  const data = await response.json();
 
-    res.on("data", (chunk) => {
-      data += chunk;
-    });
-
-    res.on("end", () => {
-      try {
-        const weather = JSON.parse(data);
-        const responseMessage = `Cuaca di ${weather.name}: ${weather.weather[0].description}, suhu ${weather.main.temp}°C, kecepatan angin ${weather.wind.speed} m/s.`;
-        callback(null, responseMessage);
-      } catch (error) {
-        callback(error, null);
-      }
-    });
-  }).on("error", (err) => {
-    callback(err, null);
-  });
+  return `Cuaca di ${data.name}: ${data.weather[0].description}, suhu ${data.main.temp}°C, kecepatan angin ${data.wind.speed} m/s.`;
 }
 
-// Server HTTP
-const server = http.createServer((req, res) => {
-  // Cek apakah permintaan GET ke root
-  if (req.method === "GET" && req.url === "/") {
-    res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end("Server berjalan dengan baik.");
-  } 
-  // Cek apakah permintaan POST untuk chat
-  else if (req.method === "POST" && req.url === "/chat") {
-    let body = "";
+// Endpoint untuk menerima pesan dari frontend
+app.post('/chat', async (req, res) => {
+  const { message } = req.body;
 
-    req.on("data", (chunk) => {
-      body += chunk;
-    });
+  if (!message) {
+    return res.status(400).json({ error: "Pesan tidak boleh kosong." });
+  }
 
-    req.on("end", () => {
-      try {
-        const { message } = JSON.parse(body);
+  if (message.toLowerCase().includes("cuaca")) {
+    try {
+      const weatherResponse = await getWeather(DEFAULT_CITY);
+      return res.json({ response: weatherResponse });
+    } catch (err) {
+      return res.status(500).json({ error: "Gagal mengambil data cuaca." });
+    }
+  }
 
-        // Jika pesan kosong
-        if (!message) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Pesan tidak boleh kosong." }));
-          return;
-        }
-
-        // Cek apakah pesan berhubungan dengan cuaca
-        if (message.toLowerCase().includes("cuaca")) {
-          getWeather(DEFAULT_CITY, (err, weatherResponse) => {
-            if (err) {
-              res.writeHead(500, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ error: "Gagal mengambil data cuaca." }));
-            } else {
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ response: weatherResponse }));
-            }
-          });
-        } else {
-          // Jika bukan cuaca, kirim ke OpenAI
-          getOpenAIResponse(message, (err, aiResponse) => {
-            if (err) {
-              res.writeHead(500, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ error: "Gagal memproses permintaan AI." }));
-            } else {
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ response: aiResponse }));
-            }
-          });
-        }
-      } catch (error) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Permintaan tidak valid." }));
-      }
-    });
-  } else {
-    // Jika endpoint tidak ditemukan
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Endpoint tidak ditemukan." }));
+  try {
+    const aiResponse = await getOpenAIResponse(message);
+    return res.json({ response: aiResponse });
+  } catch (err) {
+    return res.status(500).json({ error: "Gagal memproses permintaan AI." });
   }
 });
 
-// Jalankan server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
+// Menjalankan server
+app.listen(port, () => {
+  console.log(`Server berjalan di http://localhost:${port}`);
 });
-        
